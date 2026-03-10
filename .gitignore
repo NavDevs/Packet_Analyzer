@@ -1,0 +1,11 @@
+build/
+bin/
+*.exe
+*.o
+*.obj
+*.pcap
+.vscode/
+.idea/
+.vs/
+CMakeSettings.json
+out/
