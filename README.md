@@ -9,6 +9,10 @@ A powerful **Deep Packet Inspection** system that analyzes network traffic to id
 
 ## Live Demo (Web Dashboard)
 
+### Try It Now: https://packet-analyzer-iota.vercel.app/
+
+---
+
 ### Option 1: Run Locally
 ```bash
 cd python
