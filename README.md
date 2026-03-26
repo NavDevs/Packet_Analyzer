@@ -9,15 +9,19 @@ A powerful **Deep Packet Inspection** system that analyzes network traffic to id
 
 ## Live Demo (Web Dashboard)
 
-**Try it now:** https://navdevs.github.io/Packet_Analyzer/
-
-### Quick Start (Web Version)
+### Option 1: Run Locally
 ```bash
 cd python
 pip install flask
 python server.py
 # Open http://localhost:5000 in your browser
 ```
+
+### Option 2: Deploy to Render (Free)
+1. Go to [render.com](https://render.com) and sign up
+2. Click "New" → "Web Service"
+3. Connect your GitHub repo
+4. Deploy automatically!
 
 ### Quick Start (CLI)
 ```bash
