@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: dpi-dashboard
+    env: python
+    buildCommand: pip install flask
+    startCommand: cd python && python server.py
+    plan: free

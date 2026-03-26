@@ -1,0 +1,33 @@
+name: Deploy DPI Dashboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install flask
+      
+      - name: Run tests
+        run: |
+          cd python
+          python -c "from server import app; print('Server module OK')"
+      
+      - name: Deploy to Render
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -X POST $RENDER_DEPLOY_HOOK_URL
