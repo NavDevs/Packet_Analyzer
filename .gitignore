@@ -4,8 +4,16 @@ bin/
 *.o
 *.obj
 *.pcap
+output*.pcap
 .vscode/
 .idea/
 .vs/
 CMakeSettings.json
 out/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/

@@ -1,7 +1,30 @@
 # DPI Engine - Deep Packet Inspection System
 
+![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-This document explains **everything** about this project - from basic networking concepts to the complete code architecture. After reading this, you should understand exactly how packets flow through the system without needing to read the code.
+A powerful **Deep Packet Inspection** system that analyzes network traffic to identify applications, block unwanted traffic, and provide detailed insights into network usage.
+
+---
+
+## Live Demo (Web Dashboard)
+
+**Try it now:** https://navdevs.github.io/Packet_Analyzer/
+
+### Quick Start (Web Version)
+```bash
+cd python
+pip install flask
+python server.py
+# Open http://localhost:5000 in your browser
+```
+
+### Quick Start (CLI)
+```bash
+cd python
+python main.py ../test_dpi.pcap output.pcap
+python main.py ../test_dpi.pcap blocked.pcap --block-app YouTube
+```
 
 ---
 
