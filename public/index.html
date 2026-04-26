@@ -3,233 +3,1237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DPI Engine Dashboard</title>
+    <title>DPI Engine | Deep Packet Inspection System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
+        /* ============================================
+           BAUHAUS DESIGN SYSTEM - CSS VARIABLES
+           ============================================ */
+        :root {
+            /* Colors */
+            --bg-canvas: #F0F0F0;
+            --bg-white: #FFFFFF;
+            --fg-black: #121212;
+            --primary-red: #D02020;
+            --primary-blue: #1040C0;
+            --primary-yellow: #F0C020;
+            --muted: #E0E0E0;
+            --light-yellow: #FFF9C4;
+            
+            /* Typography */
+            --font-family: 'Outfit', sans-serif;
+            
+            /* Spacing */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 48px;
+            --space-2xl: 64px;
+            
+            /* Shadows */
+            --shadow-sm: 3px 3px 0px 0px var(--fg-black);
+            --shadow-md: 4px 4px 0px 0px var(--fg-black);
+            --shadow-lg: 6px 6px 0px 0px var(--fg-black);
+            --shadow-xl: 8px 8px 0px 0px var(--fg-black);
+            
+            /* Borders */
+            --border-sm: 2px;
+            --border-md: 4px;
+        }
+
+        /* ============================================
+           BASE RESET
+           ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: var(--font-family);
+            background: var(--bg-canvas);
+            color: var(--fg-black);
             min-height: 100vh;
-            color: #fff;
+            line-height: 1.6;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 30px 0; border-bottom: 2px solid #0f3460; margin-bottom: 30px; }
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #00d9ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+
+        /* ============================================
+           TYPOGRAPHY
+           ============================================ */
+        h1, h2, h3, h4 {
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            line-height: 0.95;
         }
-        .subtitle { color: #888; font-size: 1rem; }
+        
+        h1 { font-size: clamp(2.5rem, 8vw, 6rem); }
+        h2 { font-size: clamp(1.8rem, 5vw, 3.5rem); }
+        h3 { font-size: clamp(1.2rem, 3vw, 1.8rem); }
+        h4 { font-size: clamp(1rem, 2vw, 1.25rem); }
+        
+        p {
+            font-weight: 500;
+            font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+            line-height: 1.7;
+        }
+
+        /* ============================================
+           LAYOUT UTILITIES
+           ============================================ */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--space-md);
+        }
+        
+        .section {
+            padding: var(--space-2xl) 0;
+            border-bottom: var(--border-md) solid var(--fg-black);
+        }
+        
+        .section-blue { background: var(--primary-blue); color: white; }
+        .section-yellow { background: var(--primary-yellow); }
+        .section-red { background: var(--primary-red); color: white; }
+        .section-dark { background: var(--fg-black); color: white; }
+        
+        /* ============================================
+           BUTTONS
+           ============================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            padding: var(--space-md) var(--space-xl);
+            font-family: var(--font-family);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: var(--border-sm) solid var(--fg-black);
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary-red);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-secondary {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-yellow {
+            background: var(--primary-yellow);
+            color: var(--fg-black);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-outline {
+            background: white;
+            color: var(--fg-black);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: none;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        /* ============================================
+           CARDS
+           ============================================ */
         .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: white;
+            border: var(--border-md) solid var(--fg-black);
+            box-shadow: var(--shadow-xl);
+            padding: var(--space-xl);
+            position: relative;
+            transition: transform 0.2s ease-out;
         }
+        
+        .card:hover {
+            transform: translateY(-4px);
+        }
+        
         .card-title {
-            font-size: 1.2rem;
-            color: #00d9ff;
-            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            margin-bottom: var(--space-md);
         }
+
+        /* Card corner decoration */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: var(--space-md);
+            right: var(--space-md);
+            width: 12px;
+            height: 12px;
+            background: var(--primary-red);
+        }
+        
+        .card.blue::after { background: var(--primary-blue); }
+        .card.yellow::after { background: var(--primary-yellow); }
+
+        /* ============================================
+           GEOMETRIC DECORATIONS
+           ============================================ */
+        .geo-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-red);
+            border: var(--border-sm) solid var(--fg-black);
+        }
+        
+        .geo-square {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-blue);
+            border: var(--border-sm) solid var(--fg-black);
+        }
+        
+        .geo-triangle {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-yellow);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        
+        .geo-rotate {
+            transform: rotate(45deg);
+        }
+
+        /* ============================================
+           FORM ELEMENTS
+           ============================================ */
+        select, input[type="text"], input[type="file"] {
+            padding: var(--space-md);
+            border: var(--border-sm) solid var(--fg-black);
+            font-family: var(--font-family);
+            font-size: 1rem;
+            background: white;
+            width: 100%;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ============================================
+           UPLOAD AREA
+           ============================================ */
         .upload-area {
-            border: 2px dashed #0f3460;
-            border-radius: 10px;
-            padding: 40px;
+            border: var(--border-md) dashed var(--fg-black);
+            padding: var(--space-2xl);
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
+            transition: all 0.2s;
+            background: white;
         }
-        .upload-area:hover { border-color: #00d9ff; background: rgba(0, 217, 255, 0.05); }
-        .upload-area.dragover { border-color: #00ff88; background: rgba(0, 255, 136, 0.1); }
-        .upload-icon { font-size: 3rem; margin-bottom: 10px; }
-        .upload-text { color: #888; }
+        
+        .upload-area:hover {
+            background: var(--light-yellow);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .upload-area.dragover {
+            background: var(--primary-yellow);
+            box-shadow: var(--shadow-lg);
+        }
+        
         .file-input { display: none; }
-        .file-name { color: #00ff88; font-weight: bold; margin-top: 10px; }
-        .rules-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        
+        .file-name {
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-top: var(--space-md);
+        }
+
+        /* ============================================
+           RULES
+           ============================================ */
+        .rules-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+            margin: var(--space-md) 0;
+        }
+        
         .rule-tag {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 15px;
-            background: rgba(255, 107, 107, 0.2);
-            border: 1px solid #ff6b6b;
-            border-radius: 20px;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            background: var(--primary-red);
+            color: white;
+            border: var(--border-sm) solid var(--fg-black);
             font-size: 0.85rem;
+            font-weight: 700;
         }
-        .rule-tag .remove { cursor: pointer; color: #ff6b6b; font-weight: bold; }
-        .add-rule-form { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
-        select, input {
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid #0f3460;
-            background: rgba(0, 0, 0, 0.3);
-            color: #fff;
-            font-size: 1rem;
-            flex: 1;
-        }
-        select:focus, input:focus { outline: none; border-color: #00d9ff; }
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+        
+        .rule-tag .remove {
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-weight: 900;
+            padding: 0 4px;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #00d9ff, #00ff88);
-            color: #1a1a2e;
+        
+        .rule-tag .remove:hover {
+            background: white;
+            color: var(--primary-red);
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        
+        .add-rule-form {
+            display: flex;
+            gap: var(--space-md);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .add-rule-form > * {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        /* ============================================
+           STATS
+           ============================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-md);
+            margin: var(--space-xl) 0;
+        }
+        
         .stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 20px;
+            background: white;
+            border: var(--border-md) solid var(--fg-black);
+            padding: var(--space-lg);
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: var(--shadow-md);
         }
+        
         .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #00d9ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 900;
+            color: var(--fg-black);
         }
-        .stat-label { color: #888; font-size: 0.9rem; margin-top: 5px; }
-        .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .app-list, .domain-list { max-height: 300px; overflow-y: auto; }
+        
+        .stat-label {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* ============================================
+           LISTS
+           ============================================ */
+        .app-list, .domain-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: var(--border-sm) solid var(--fg-black);
+        }
+        
         .app-item, .domain-item {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            padding: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: var(--space-md);
+            border-bottom: var(--border-sm) solid var(--muted);
         }
+        
+        .app-item:last-child, .domain-item:last-child {
+            border-bottom: none;
+        }
+        
         .app-bar {
             flex: 1;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            margin: 0 15px;
-            overflow: hidden;
+            height: 12px;
+            background: var(--muted);
+            margin: 0 var(--space-md);
+            position: relative;
         }
+        
         .app-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #00d9ff, #00ff88);
-            border-radius: 4px;
+            background: var(--primary-blue);
+            transition: width 0.3s ease-out;
         }
-        .domain-name { color: #00ff88; font-family: monospace; }
-        .loading { display: none; text-align: center; padding: 50px; }
+        
+        .domain-name {
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        /* ============================================
+           LOADING
+           ============================================ */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: var(--space-2xl);
+        }
+        
         .spinner {
-            width: 50px; height: 50px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #00d9ff;
-            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            border: var(--border-md) solid var(--muted);
+            border-top-color: var(--primary-red);
+            margin: 0 auto var(--space-lg);
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .spinner.square {
+            border-radius: 0;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         .hidden { display: none !important; }
-        @media (max-width: 768px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .results-grid { grid-template-columns: 1fr; }
+
+        /* ============================================
+           NAVIGATION
+           ============================================ */
+        nav {
+            background: white;
+            border-bottom: var(--border-md) solid var(--fg-black);
+            padding: var(--space-md) 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+        
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-weight: 900;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+        
+        .logo-shapes {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .logo-shape {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .logo-shape.circle { 
+            background: var(--primary-red); 
+            border-radius: 50%;
+            border: 2px solid var(--fg-black);
+        }
+        .logo-shape.square { 
+            background: var(--primary-blue); 
+            border: 2px solid var(--fg-black);
+        }
+        .logo-shape.triangle { 
+            background: var(--primary-yellow); 
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: var(--space-lg);
+            list-style: none;
+        }
+        
+        .nav-links a {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: var(--fg-black);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary-red);
+        }
+        
+        .nav-links a.active {
+            color: var(--primary-red);
+        }
+
+        /* ============================================
+           HERO SECTION
+           ============================================ */
+        .hero {
+            min-height: 90vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: var(--border-md) solid var(--fg-black);
+        }
+        
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: var(--space-2xl);
+            background: var(--bg-canvas);
+        }
+        
+        .hero-visual {
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-shapes {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+        
+        .hero-shapes .geo-circle {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            top: 20px;
+            left: 20px;
+            background: var(--primary-red);
+            opacity: 0.9;
+        }
+        
+        .hero-shapes .geo-square {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            top: 60px;
+            right: 40px;
+            background: var(--primary-yellow);
+            transform: rotate(45deg);
+        }
+        
+        .hero-shapes .geo-triangle {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            background: var(--primary-yellow);
+            padding: var(--space-sm) var(--space-md);
+            border: var(--border-sm) solid var(--fg-black);
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: var(--space-lg);
+        }
+
+        /* ============================================
+           FEATURES GRID
+           ============================================ */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-xl);
+        }
+        
+        .feature-card {
+            background: white;
+            border: var(--border-md) solid var(--fg-black);
+            padding: var(--space-xl);
+            box-shadow: var(--shadow-md);
+            transition: all 0.2s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-blue);
+            border: var(--border-sm) solid var(--fg-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: var(--space-md);
+        }
+
+        /* ============================================
+           STEPS
+           ============================================ */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-xl);
+            margin-top: var(--space-xl);
+        }
+        
+        .step {
+            position: relative;
+            padding-top: var(--space-xl);
+        }
+        
+        .step-number {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 48px;
+            height: 48px;
+            background: var(--primary-red);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            border: var(--border-sm) solid var(--fg-black);
+            transform: rotate(-5deg);
+        }
+        
+        .step-content {
+            background: white;
+            border: var(--border-md) solid var(--fg-black);
+            padding: var(--space-lg);
+            padding-top: calc(var(--space-xl) + 20px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .step-number span {
+            display: block;
+            transform: rotate(5deg);
+        }
+
+        /* ============================================
+           USE CASES
+           ============================================ */
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-xl);
+        }
+        
+        .use-case {
+            background: white;
+            border: var(--border-md) solid var(--fg-black);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        
+        .use-case-header {
+            padding: var(--space-md) var(--space-lg);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        
+        .use-case.red .use-case-header { background: var(--primary-red); color: white; }
+        .use-case.blue .use-case-header { background: var(--primary-blue); color: white; }
+        .use-case.yellow .use-case-header { background: var(--primary-yellow); }
+        
+        .use-case-body {
+            padding: var(--space-lg);
+            color: var(--fg-black);
+        }
+
+        /* ============================================
+           ACCORDION
+           ============================================ */
+        .accordion {
+            border: var(--border-md) solid var(--fg-black);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--space-md);
+        }
+        
+        .accordion-header {
+            width: 100%;
+            padding: var(--space-md) var(--space-lg);
+            background: white;
+            border: none;
+            font-family: var(--font-family);
+            font-weight: 700;
+            font-size: 1rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .accordion-header:hover {
+            background: var(--light-yellow);
+        }
+        
+        .accordion-header.active {
+            background: var(--primary-red);
+            color: white;
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: var(--light-yellow);
+            border-top: var(--border-md) solid var(--fg-black);
+        }
+        
+        .accordion-content-inner {
+            padding: var(--space-lg);
+        }
+        
+        .accordion-icon {
+            transition: transform 0.2s;
+        }
+        
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* ============================================
+           DASHBOARD SECTION
+           ============================================ */
+        .dashboard-section {
+            background: var(--bg-canvas);
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-lg);
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        footer {
+            background: var(--fg-black);
+            color: white;
+            padding: var(--space-2xl) 0;
+            text-align: center;
+        }
+        
+        footer p {
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .hero {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+            
+            .hero-visual {
+                min-height: 300px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .add-rule-form > * {
+                flex: 1 1 100%;
+            }
+        }
+
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+        .text-center { text-align: center; }
+        .text-white { color: white; }
+        .mb-sm { margin-bottom: var(--space-sm); }
+        .mb-md { margin-bottom: var(--space-md); }
+        .mb-lg { margin-bottom: var(--space-lg); }
+        .mb-xl { margin-bottom: var(--space-xl); }
+        .mt-xl { margin-top: var(--space-xl); }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .gap-md { gap: var(--space-md); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>DPI Engine Dashboard</h1>
-            <p class="subtitle">Deep Packet Inspection - Network Traffic Analyzer</p>
-        </header>
-        
-        <div class="card">
-            <div class="card-title">Upload PCAP File</div>
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📁</div>
-                <div class="upload-text">Click or drag & drop a .pcap file here</div>
-                <input type="file" class="file-input" id="fileInput" accept=".pcap">
-                <div class="file-name" id="fileName"></div>
+    <!-- ============================================
+         NAVIGATION
+         ============================================ -->
+    <nav>
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <div class="logo-shapes">
+                        <div class="logo-shape circle"></div>
+                        <div class="logo-shape square"></div>
+                        <div class="logo-shape triangle"></div>
+                    </div>
+                    <span>DPI Engine</span>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#use-cases">Use Cases</a></li>
+                    <li><a href="#technical">Technical</a></li>
+                    <li><a href="#dashboard" class="active">Dashboard</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ============================================
+         HERO SECTION
+         ============================================ -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>●</span> Deep Packet Inspection System
+            </div>
+            <h1 class="mb-md">Analyze.<br>Block.<br>Control.</h1>
+            <p class="mb-xl">
+                A powerful network traffic analysis tool that examines packet contents 
+                to identify applications, block unwanted traffic, and provide detailed 
+                insights into your network usage.
+            </p>
+            <div class="flex gap-md">
+                <a href="#dashboard" class="btn btn-primary">Launch Dashboard</a>
+                <a href="#about" class="btn btn-outline">Learn More</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="hero-shapes">
+                <div class="geo-circle"></div>
+                <div class="geo-square"></div>
+                <div class="geo-triangle"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         ABOUT SECTION - What is DPI?
+         ============================================ -->
+    <section class="section" id="about">
+        <div class="container">
+            <div class="text-center mb-xl">
+                <h2 class="mb-md">What is DPI?</h2>
+                <p style="max-width: 800px; margin: 0 auto;">
+                    <strong>Deep Packet Inspection (DPI)</strong> is an advanced network technology 
+                    that examines the actual content of data packets, not just headers.
+                </p>
             </div>
             
-            <div class="add-rule-form">
-                <select id="ruleType">
-                    <option value="app">Block App</option>
-                    <option value="domain">Block Domain</option>
-                </select>
-                <select id="ruleAppValue" style="display:none;">
-                    <option value="">Select app...</option>
-                    <option value="YouTube">YouTube</option>
-                    <option value="Facebook">Facebook</option>
-                    <option value="Netflix">Netflix</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="Instagram">Instagram</option>
-                    <option value="Twitter">Twitter/X</option>
-                    <option value="Discord">Discord</option>
-                    <option value="Spotify">Spotify</option>
-                </select>
-                <input type="text" id="ruleValue" placeholder="Enter domain (e.g., example.com)">
-                <button class="btn btn-primary" onclick="addRule()">+ Add Rule</button>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h4 class="mb-sm">Packet Analysis</h4>
+                    <p>Examines every packet's payload to identify the actual application generating the traffic, not just port numbers.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: var(--primary-red);">🚫</div>
+                    <h4 class="mb-sm">Traffic Blocking</h4>
+                    <p>Create custom rules to block specific applications, domains, or IP addresses based on your requirements.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: var(--primary-yellow); color: var(--fg-black);">📈</div>
+                    <h4 class="mb-sm">Insights & Reports</h4>
+                    <p>Generate detailed reports showing traffic breakdown by application, protocol, and destination.</p>
+                </div>
+            </div>
+
+            <div class="card mt-xl">
+                <h3 class="mb-lg">How DPI Differs from Regular Firewalls</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
+                    <div>
+                        <h4 style="color: var(--muted); margin-bottom: var(--space-md);">Traditional Firewall</h4>
+                        <p>Only looks at packet headers (IP addresses, port numbers). Can block by port 80 or IP range, but can't tell if traffic is YouTube vs Netflix.</p>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--primary-blue); margin-bottom: var(--space-md);">DPI Engine</h4>
+                        <p>Looks inside the packet payload. Identifies the actual application by examining protocol signatures, SNI fields, and content patterns.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         HOW IT WORKS SECTION
+         ============================================ -->
+    <section class="section section-yellow" id="how-it-works">
+        <div class="container">
+            <div class="text-center mb-xl">
+                <h2 class="mb-md">How to Use</h2>
+                <p>Get started with DPI analysis in four simple steps</p>
             </div>
             
-            <div class="rules-container" id="rulesContainer" style="margin-top:15px;"></div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number"><span>1</span></div>
+                    <div class="step-content">
+                        <h4 class="mb-sm">Upload PCAP</h4>
+                        <p>Upload a PCAP file containing captured network traffic. This is the raw data your DPI engine will analyze.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: var(--primary-blue);"><span>2</span></div>
+                    <div class="step-content">
+                        <h4 class="mb-sm">Set Rules</h4>
+                        <p>Define blocking rules by application (YouTube, Facebook), domain (example.com), or IP address.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number" style="background: var(--primary-yellow); color: var(--fg-black);"><span>3</span></div>
+                    <div class="step-content">
+                        <h4 class="mb-sm">Run Analysis</h4>
+                        <p>Click "Run Analysis" to process your traffic. The engine identifies apps and applies your blocking rules.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number"><span>4</span></div>
+                    <div class="step-content">
+                        <h4 class="mb-sm">View Results</h4>
+                        <p>Review detailed statistics: total packets, forwarded vs dropped, app breakdown, and detected domains.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         USE CASES SECTION
+         ============================================ -->
+    <section class="section section-blue" id="use-cases">
+        <div class="container">
+            <div class="text-center mb-xl">
+                <h2 class="mb-md text-white">Real-World Use Cases</h2>
+                <p class="text-white">How organizations use DPI technology</p>
+            </div>
             
-            <div style="text-align: center; margin-top: 25px;">
-                <button class="btn btn-primary" id="runBtn" onclick="runAnalysis()" disabled>
-                    Run Analysis
+            <div class="use-cases">
+                <div class="use-case red">
+                    <div class="use-case-header">Enterprise Security</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Block unauthorized apps</strong> in corporate networks. Prevent employees from accessing social media, streaming services, or file-sharing apps during work hours.</p>
+                        <p><em>Example: Block YouTube, TikTok, and Netflix on office WiFi.</em></p>
+                    </div>
+                </div>
+                <div class="use-case blue">
+                    <div class="use-case-header">ISP Traffic Management</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Throttle or block</strong> high-bandwidth applications during peak hours. Identify P2P traffic and BitTorrent to manage network congestion.</p>
+                        <p><em>Example: Reduce bandwidth for video streaming during peak hours.</em></p>
+                    </div>
+                </div>
+                <div class="use-case yellow">
+                    <div class="use-case-header">Parental Controls</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Filter inappropriate content</strong> by blocking specific domains and apps. Monitor children's internet usage patterns.</p>
+                        <p><em>Example: Block specific websites or limit gaming traffic.</em></p>
+                    </div>
+                </div>
+                <div class="use-case red">
+                    <div class="use-case-header">Network Monitoring</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Gain visibility</strong> into what applications are using your network. Identify bandwidth hogs and unusual traffic patterns.</p>
+                        <p><em>Example: See which apps consume the most data.</em></p>
+                    </div>
+                </div>
+                <div class="use-case blue">
+                    <div class="use-case-header">Security Analysis</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Detect suspicious traffic</strong> by analyzing packet contents. Identify malware communications and data exfiltration attempts.</p>
+                        <p><em>Example: Detect unusual DNS queries or encrypted tunnels.</em></p>
+                    </div>
+                </div>
+                <div class="use-case yellow">
+                    <div class="use-case-header">Compliance</div>
+                    <div class="use-case-body">
+                        <p class="mb-md"><strong>Enforce regulatory compliance</strong> by blocking prohibited services and logging traffic for audits.</p>
+                        <p><em>Example: Block unauthorized cloud storage services.</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         TECHNICAL DETAILS SECTION
+         ============================================ -->
+    <section class="section" id="technical">
+        <div class="container">
+            <div class="text-center mb-xl">
+                <h2 class="mb-md">Technical Details</h2>
+                <p>Universal packet inspection capabilities</p>
+            </div>
+            
+            <div class="card mb-lg">
+                <h3 class="mb-lg">Supported Protocols</h3>
+                <div class="features-grid" style="margin-top: 0;">
+                    <div class="feature-card" style="border-color: var(--primary-red);">
+                        <h4 class="mb-sm">TLS/SSL (HTTPS)</h4>
+                        <p>Extracts Server Name Indication (SNI) from TLS handshakes to identify websites even with encryption.</p>
+                    </div>
+                    <div class="feature-card" style="border-color: var(--primary-blue);">
+                        <h4 class="mb-sm">HTTP</h4>
+                        <p>Analyzes Host headers and URL paths to identify web applications and services.</p>
+                    </div>
+                    <div class="feature-card" style="border-color: var(--primary-yellow);">
+                        <h4 class="mb-sm">QUIC</h4>
+                        <p>Identifies modern protocols used by Google services including YouTube and Gmail.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4 class="mb-sm">DNS</h4>
+                        <p>Inspects DNS queries to identify domain lookups and potential tunneling attempts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion">
+                <button class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>🔍 How SNI Extraction Works</span>
+                    <span class="accordion-icon">▼</span>
                 </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p class="mb-md"><strong>Server Name Indication (SNI)</strong> is a TLS extension that allows a client to specify which hostname it's trying to connect to during the SSL handshake.</p>
+                        <p class="mb-md">When you visit a website, your browser sends the domain name (e.g., "youtube.com") in cleartext during the initial TLS handshake—even before encryption is established.</p>
+                        <p><strong>DPI extracts this SNI field</strong> to determine which website or service the encrypted connection is for, without decrypting the actual content.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion">
+                <button class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>📦 What is a PCAP File?</span>
+                    <span class="accordion-icon">▼</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p class="mb-md"><strong>PCAP (Packet Capture)</strong> is a standard file format for storing network traffic data. It's like a recording of all network packets that passed through a network interface.</p>
+                        <p class="mb-md"><strong>How to create a PCAP:</strong></p>
+                        <ul style="margin-left: var(--space-lg); margin-bottom: var(--space-md);">
+                            <li>Wireshark: File → Capture → Start, then save as .pcap</li>
+                            <li>tcpdump: <code>tcpdump -w capture.pcap</code></li>
+                            <li>Linux: <code>sudo tcpdump -i eth0 -w traffic.pcap</code></li>
+                        </ul>
+                        <p>PCAP files contain the complete packet data including headers and payload, allowing DPI to perform deep analysis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion">
+                <button class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>🛡️ How Blocking Works</span>
+                    <span class="accordion-icon">▼</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p class="mb-md">When the DPI engine processes packets, it applies your blocking rules in real-time:</p>
+                        <ol style="margin-left: var(--space-lg);">
+                            <li class="mb-sm"><strong>App Blocking:</strong> If a packet's SNI matches a known app pattern (e.g., "googlevideo.com" = YouTube), it can be dropped.</li>
+                            <li class="mb-sm"><strong>Domain Blocking:</strong> Exact domain matches in SNI or DNS queries trigger packet drops.</li>
+                            <li class="mb-sm"><strong>IP Blocking:</strong> Source/destination IP addresses are checked against blocklists.</li>
+                        </ol>
+                        <p>Dropped packets are excluded from the output PCAP, simulating a firewall in action.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion">
+                <button class="accordion-header" onclick="toggleAccordion(this)">
+                    <span>⚡ Multi-threaded Architecture</span>
+                    <span class="accordion-icon">▼</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p class="mb-md">The DPI engine uses a multi-threaded pipeline for high performance:</p>
+                        <ul style="margin-left: var(--space-lg);">
+                            <li class="mb-sm"><strong>Load Balancers:</strong> Distribute packets across worker threads</li>
+                            <li class="mb-sm"><strong>Worker Threads:</strong> Each processes packets through the full pipeline</li>
+                            <li class="mb-sm"><strong>Pipeline Stages:</strong> Packet Parser → SNI Extractor → Rule Engine → Output</li>
+                        </ul>
+                        <p>This architecture allows processing millions of packets efficiently.</p>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analyzing packets...</p>
-        </div>
-        
-        <div id="results" class="hidden">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalPackets">0</div>
-                    <div class="stat-label">Total Packets</div>
+    </section>
+
+    <!-- ============================================
+         DASHBOARD SECTION
+         ============================================ -->
+    <section class="section dashboard-section" id="dashboard">
+        <div class="container">
+            <div class="text-center mb-xl">
+                <h2 class="mb-md">Analysis Dashboard</h2>
+                <p>Upload a PCAP file and run deep packet inspection analysis</p>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">📁 Upload PCAP File</h3>
+                <div class="upload-area" id="uploadArea">
+                    <div style="font-size: 3rem; margin-bottom: var(--space-md);">📁</div>
+                    <div>Click or drag & drop a .pcap file here</div>
+                    <input type="file" class="file-input" id="fileInput" accept=".pcap">
+                    <div class="file-name" id="fileName"></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="forwarded">0</div>
-                    <div class="stat-label">Forwarded</div>
+                
+                <h3 class="card-title" style="margin-top: var(--space-xl);">🛡️ Blocking Rules</h3>
+                <div class="add-rule-form">
+                    <select id="ruleType">
+                        <option value="app">Block App</option>
+                        <option value="domain">Block Domain</option>
+                    </select>
+                    <select id="ruleAppValue" style="display:none;">
+                        <option value="">Select app...</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Netflix">Netflix</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Twitter">Twitter/X</option>
+                        <option value="Discord">Discord</option>
+                        <option value="Spotify">Spotify</option>
+                    </select>
+                    <input type="text" id="ruleValue" placeholder="Enter domain (e.g., example.com)">
+                    <button class="btn btn-primary" onclick="addRule()">+ Add Rule</button>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="dropped">0</div>
-                    <div class="stat-label">Dropped</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="detectedApps">0</div>
-                    <div class="stat-label">Domains Found</div>
+                
+                <div class="rules-container" id="rulesContainer"></div>
+                
+                <div style="text-align: center; margin-top: var(--space-xl);">
+                    <button class="btn btn-primary" id="runBtn" onclick="runAnalysis()" disabled>
+                        ▶ Run Analysis
+                    </button>
                 </div>
             </div>
             
-            <div class="results-grid">
-                <div class="card">
-                    <div class="card-title">Traffic by Application</div>
-                    <div class="app-list" id="appList"></div>
+            <div class="loading" id="loading">
+                <div class="spinner square"></div>
+                <h3>Analyzing packets...</h3>
+                <p>Processing packet data through DPI engine</p>
+            </div>
+            
+            <div id="results" class="hidden">
+                <h3 class="mb-lg">📊 Analysis Results</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPackets">0</div>
+                        <div class="stat-label">Total Packets</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="forwarded">0</div>
+                        <div class="stat-label">Forwarded</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dropped">0</div>
+                        <div class="stat-label">Dropped</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="detectedApps">0</div>
+                        <div class="stat-label">Domains Found</div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-title">Detected Domains / SNIs</div>
-                    <div class="domain-list" id="domainList"></div>
+                
+                <div class="results-grid">
+                    <div class="card blue">
+                        <h3 class="card-title">Traffic by Application</h3>
+                        <div class="app-list" id="appList"></div>
+                    </div>
+                    <div class="card yellow">
+                        <h3 class="card-title">Detected Domains / SNIs</h3>
+                        <div class="domain-list" id="domainList"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </section>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer>
+        <div class="container">
+            <div class="logo" style="justify-content: center; margin-bottom: var(--space-md);">
+                <div class="logo-shapes">
+                    <div class="logo-shape circle"></div>
+                    <div class="logo-shape square"></div>
+                    <div class="logo-shape triangle"></div>
+                </div>
+            </div>
+            <p>DPI Engine — Deep Packet Inspection System</p>
+            <p style="margin-top: var(--space-sm);">Form Follows Function</p>
+        </div>
+    </footer>
+
     <script>
+        // ============================================
+        // ACCORDION FUNCTIONALITY
+        // ============================================
+        function toggleAccordion(header) {
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            if (header.classList.contains('active')) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            } else {
+                content.style.maxHeight = '0';
+            }
+        }
+
+        // ============================================
+        // DASHBOARD FUNCTIONALITY
+        // ============================================
         let selectedFile = null;
         let rules = [];
-        let trafficChart = null;
         
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -266,7 +1270,7 @@
         
         function handleFile(file) {
             selectedFile = file;
-            fileName.textContent = file.name;
+            fileName.textContent = 'Selected: ' + file.name;
             runBtn.disabled = false;
         }
         
@@ -300,7 +1304,7 @@
             container.innerHTML = rules.map((r, i) => `
                 <div class="rule-tag">
                     <span>${r.type.toUpperCase()}: ${r.value}</span>
-                    <span class="remove" onclick="removeRule(${i})">&times;</span>
+                    <span class="remove" onclick="removeRule(${i})">×</span>
                 </div>
             `).join('');
         }
@@ -355,19 +1359,26 @@
             
             renderAppList(data.app_breakdown);
             renderDomainList(data.detected_snis);
+            
+            // Scroll to results
+            results.scrollIntoView({ behavior: 'smooth' });
         }
         
         function renderAppList(breakdown) {
             const container = document.getElementById('appList');
+            if (breakdown.length === 0) {
+                container.innerHTML = '<div class="app-item"><span>No applications detected</span></div>';
+                return;
+            }
             const maxCount = Math.max(...breakdown.map(a => a.count), 1);
             
             container.innerHTML = breakdown.map(app => `
                 <div class="app-item">
-                    <span>${app.name}</span>
+                    <span style="font-weight: 700;">${app.name}</span>
                     <div class="app-bar">
                         <div class="app-bar-fill" style="width: ${(app.count / maxCount * 100)}%"></div>
                     </div>
-                    <span>${app.count} (${app.percentage}%)</span>
+                    <span style="font-weight: 700;">${app.count} (${app.percentage}%)</span>
                 </div>
             `).join('');
         }
@@ -375,16 +1386,29 @@
         function renderDomainList(domains) {
             const container = document.getElementById('domainList');
             if (domains.length === 0) {
-                container.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">No domains detected</p>';
+                container.innerHTML = '<div class="domain-item"><span>No domains detected</span></div>';
                 return;
             }
             container.innerHTML = domains.map(d => `
                 <div class="domain-item">
                     <span class="domain-name">${d.domain}</span>
-                    <span>${d.app}</span>
+                    <span style="font-weight: 700;">${d.app}</span>
                 </div>
             `).join('');
         }
+
+        // ============================================
+        // SMOOTH SCROLL FOR NAV LINKS
+        // ============================================
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
     </script>
 </body>
 </html>
