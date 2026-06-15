@@ -775,9 +775,21 @@
             .hero-visual {
                 min-height: 300px;
             }
+
+            .hero-content {
+                padding: var(--space-xl) var(--space-lg);
+            }
             
+            .nav-content {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+
             .nav-links {
-                display: none;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--space-md);
             }
             
             .stats-grid {
@@ -786,6 +798,45 @@
             
             .add-rule-form > * {
                 flex: 1 1 100%;
+            }
+
+            .features-grid, .results-grid, .use-cases, .steps {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-content .flex.gap-md {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .hero-content .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-links {
+                gap: var(--space-sm);
+            }
+            
+            .nav-links a {
+                font-size: 0.75rem;
+            }
+            
+            .section {
+                padding: var(--space-xl) 0;
+            }
+            
+            .card {
+                padding: var(--space-lg);
+            }
+            
+            .hero-badge {
+                font-size: 0.7rem;
             }
         }
 
