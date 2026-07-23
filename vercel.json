@@ -1,8 +1,7 @@
 {
-  "outputDirectory": "public",
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "destination": "/api/run"
     }
   ]

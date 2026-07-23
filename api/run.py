@@ -3,6 +3,7 @@ import struct
 import json
 import sys
 import os
+import mimetypes
 from http.server import BaseHTTPRequestHandler
 
 # Set up paths for importing python/ modules
@@ -10,6 +11,7 @@ _THIS_FILE = os.path.abspath(__file__)
 _API_DIR   = os.path.dirname(_THIS_FILE)
 _REPO_ROOT = os.path.dirname(_API_DIR)
 _PYTHON_DIR = os.path.join(_REPO_ROOT, 'python')
+_PUBLIC_DIR = os.path.join(_PYTHON_DIR, 'static')
 
 if _PYTHON_DIR not in sys.path:
     sys.path.insert(0, _PYTHON_DIR)
@@ -17,6 +19,43 @@ if _PYTHON_DIR not in sys.path:
 from dpi_types import APP_NAMES, AppType, sni_to_app_type
 from sni_extractor import SNIExtractor, HTTPHostExtractor
 from packet_parser import PacketParser
+
+
+def _serve_static(h, path):
+    """Read a file from _PUBLIC_DIR (python/static) and write it to the response."""
+    # Strip query string
+    path = path.split('?')[0]
+
+    if path in ('/', ''):
+        path = '/index.html'
+
+    # Resolve to absolute path and prevent directory traversal
+    target = os.path.realpath(os.path.join(_PUBLIC_DIR, path.lstrip('/')))
+    pub_real = os.path.realpath(_PUBLIC_DIR)
+
+    if not target.startswith(pub_real):
+        _send_json(h, {'error': 'Forbidden'}, status=403)
+        return
+
+    if not os.path.isfile(target):
+        # SPA fallback — serve index.html
+        target = os.path.join(_PUBLIC_DIR, 'index.html')
+
+    if not os.path.isfile(target):
+        _send_json(h, {'error': 'index.html not found', 'looked_in': _PUBLIC_DIR}, status=404)
+        return
+
+    mime, _ = mimetypes.guess_type(target)
+    mime = mime or 'application/octet-stream'
+
+    with open(target, 'rb') as f:
+        body = f.read()
+
+    h.send_response(200)
+    h.send_header('Content-Type', mime)
+    h.send_header('Content-Length', str(len(body)))
+    h.end_headers()
+    h.wfile.write(body)
 
 
 class SimplePcapReader:
@@ -183,12 +222,29 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        # We handle GET /api/apps (which can also match /api/apps/)
         normalized_path = self.path.split('?')[0].rstrip('/')
         if normalized_path == '/api/apps':
             _handle_get_apps(self)
-        else:
+        elif normalized_path == '/api/debug':
+            def _ls(p):
+                try:
+                    return os.listdir(p)
+                except Exception as ex:
+                    return str(ex)
+            _send_json(self, {
+                '__file__': _THIS_FILE,
+                'cwd': os.getcwd(),
+                'repo_root': _REPO_ROOT,
+                'public_dir': _PUBLIC_DIR,
+                'public_exists': os.path.exists(_PUBLIC_DIR),
+                'public_contents': _ls(_PUBLIC_DIR),
+                'repo_root_contents': _ls(_REPO_ROOT),
+                'api_dir_contents': _ls(_API_DIR),
+            })
+        elif normalized_path.startswith('/api'):
             _send_json(self, {'error': 'Not found'}, status=404)
+        else:
+            _serve_static(self, self.path)
 
     def do_POST(self):
         normalized_path = self.path.split('?')[0].rstrip('/')
