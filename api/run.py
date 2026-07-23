@@ -4,6 +4,7 @@ import struct
 import json
 import sys
 import os
+import mimetypes
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
@@ -37,6 +38,41 @@ class SimplePcapReader:
                 'data': pkt_data
             })
             self.offset += incl_len
+
+
+# Root of the repo — two levels up from api/run.py
+_REPO_ROOT = os.path.join(os.path.dirname(__file__), '..')
+_PUBLIC_DIR = os.path.join(_REPO_ROOT, 'public')
+
+
+def _serve_static(handler_instance, rel_path):
+    """Serve a file from the public/ directory."""
+    # Default to index.html for root or unknown paths
+    if rel_path in ('/', ''):
+        rel_path = '/index.html'
+
+    file_path = os.path.join(_PUBLIC_DIR, rel_path.lstrip('/'))
+    # Security: prevent directory traversal
+    file_path = os.path.realpath(file_path)
+    if not file_path.startswith(os.path.realpath(_PUBLIC_DIR)):
+        _send_json(handler_instance, {'error': 'Forbidden'}, status=403)
+        return
+
+    if not os.path.isfile(file_path):
+        # For SPA-style routing fall back to index.html
+        file_path = os.path.join(_PUBLIC_DIR, 'index.html')
+
+    mime_type, _ = mimetypes.guess_type(file_path)
+    mime_type = mime_type or 'application/octet-stream'
+
+    with open(file_path, 'rb') as f:
+        content = f.read()
+
+    handler_instance.send_response(200)
+    handler_instance.send_header('Content-Type', mime_type)
+    handler_instance.send_header('Content-Length', str(len(content)))
+    handler_instance.end_headers()
+    handler_instance.wfile.write(content)
 
 
 def _send_json(handler_instance, data, status=200):
@@ -213,8 +249,11 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/api/apps'):
             _handle_get_apps(self)
-        else:
+        elif self.path.startswith('/api/'):
             _send_json(self, {'error': 'Not found'}, status=404)
+        else:
+            # Serve static frontend files (index.html, favicon, etc.)
+            _serve_static(self, self.path)
 
     def do_POST(self):
         if self.path.startswith('/api/run'):
