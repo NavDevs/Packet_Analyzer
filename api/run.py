@@ -240,6 +240,23 @@ class handler(BaseHTTPRequestHandler):
         try:
             if self.path.startswith('/api/apps'):
                 _handle_get_apps(self)
+            elif self.path.startswith('/api/debug'):
+                # Temporary debug route — exposes filesystem layout
+                def _ls(p):
+                    try:
+                        return os.listdir(p)
+                    except Exception as ex:
+                        return str(ex)
+                _send_json(self, {
+                    '__file__': _THIS_FILE,
+                    'cwd': os.getcwd(),
+                    'repo_root': _REPO_ROOT,
+                    'public_dir': _PUBLIC_DIR,
+                    'public_exists': os.path.exists(_PUBLIC_DIR),
+                    'public_contents': _ls(_PUBLIC_DIR),
+                    'repo_root_contents': _ls(_REPO_ROOT),
+                    'api_dir_contents': _ls(_API_DIR),
+                })
             elif self.path.startswith('/api/'):
                 _send_json(self, {'error': 'Not found'}, status=404)
             else:
