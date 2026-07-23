@@ -9,7 +9,9 @@ import queue
 app = Flask(__name__, static_folder='static')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'python')
+# Determine base directory - works both locally and on Vercel
+BASE_DIR = os.path.dirname(SCRIPT_DIR)
+PYTHON_DIR = SCRIPT_DIR
 
 
 class DPIRunner:
@@ -164,6 +166,10 @@ def list_apps():
     
     return jsonify(apps)
 
+
+# Vercel handler
+def handler(environ, start_response):
+    return app(environ, start_response)
 
 if __name__ == '__main__':
     os.makedirs('static', exist_ok=True)
