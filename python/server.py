@@ -1,49 +1,49 @@
 from flask import Flask, request, jsonify, send_from_directory
-import subprocess
-import json
 import os
 import sys
 import threading
-import queue
 
-app = Flask(__name__, static_folder='static')
+# ── Absolute paths that work on Vercel serverless ────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Determine base directory - works both locally and on Vercel
-BASE_DIR = os.path.dirname(SCRIPT_DIR)
-PYTHON_DIR = SCRIPT_DIR
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 
 
+# ── DPI Runner with lazy import (avoids cold-start crashes) ──────────────────
 class DPIRunner:
     def __init__(self):
         self.latest_result = None
         self.is_running = False
+        self._engine = None
         self._lock = threading.Lock()
-    
+
+    def _get_engine(self):
+        if self._engine is None:
+            sys.path.insert(0, BASE_DIR)
+            from dpi_engine import DPIEngine
+            from dpi_types import APP_NAMES  # noqa: F401
+            self._engine = DPIEngine(num_lbs=2, fps_per_lb=2)
+        return self._engine
+
     def run(self, input_file, output_file, rules):
         with self._lock:
             self.is_running = True
-        
-        sys.path.insert(0, PYTHON_DIR)
-        
         try:
-            from dpi_engine import DPIEngine
-            from dpi_types import APP_NAMES
-            
-            engine = DPIEngine(num_lbs=2, fps_per_lb=2)
-            
+            engine = self._get_engine()
             for rule in rules:
-                rule_type = rule.get('type')
-                value = rule.get('value')
-                if rule_type == 'ip':
-                    engine.block_ip(value)
-                elif rule_type == 'app':
-                    engine.block_app(value)
-                elif rule_type == 'domain':
-                    engine.block_domain(value)
-            
+                rtype = rule.get('type')
+                val = rule.get('value', '')
+                if rtype == 'ip':
+                    engine.block_ip(val)
+                elif rtype == 'app':
+                    engine.block_app(val)
+                elif rtype == 'domain':
+                    engine.block_domain(val)
+
             engine.process(input_file, output_file)
-            
+
+            from dpi_types import APP_NAMES
             result = {
                 'success': True,
                 'stats': {
@@ -52,35 +52,31 @@ class DPIRunner:
                     'tcp_packets': engine.stats.tcp_packets,
                     'udp_packets': engine.stats.udp_packets,
                     'forwarded': engine.stats.forwarded,
-                    'dropped': engine.stats.dropped
+                    'dropped': engine.stats.dropped,
                 },
-                'app_breakdown': [],
-                'detected_snis': []
+                'app_breakdown': sorted([
+                    {
+                        'name': APP_NAMES.get(t, 'Unknown'),
+                        'count': c,
+                        'percentage': round(100.0 * c / engine.stats.total_packets, 1)
+                        if engine.stats.total_packets > 0 else 0,
+                    }
+                    for t, c in engine.stats.app_counts.items()
+                ], key=lambda x: x['count'], reverse=True),
+                'detected_snis': [
+                    {'domain': sni, 'app': APP_NAMES.get(a, 'Unknown')}
+                    for sni, a in engine.stats.detected_snis.items()
+                ],
             }
-            
-            for app_type, count in engine.stats.app_counts.items():
-                pct = 100.0 * count / engine.stats.total_packets if engine.stats.total_packets > 0 else 0
-                result['app_breakdown'].append({
-                    'name': APP_NAMES.get(app_type, 'Unknown'),
-                    'count': count,
-                    'percentage': round(pct, 1)
-                })
-            
-            result['app_breakdown'].sort(key=lambda x: x['count'], reverse=True)
-            
-            for sni, app in engine.stats.detected_snis.items():
-                result['detected_snis'].append({
-                    'domain': sni,
-                    'app': APP_NAMES.get(app, 'Unknown')
-                })
-            
+
             with self._lock:
                 self.latest_result = result
                 self.is_running = False
-            
             return result
-            
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             with self._lock:
                 self.is_running = False
             return {'success': False, 'error': str(e)}
@@ -89,39 +85,33 @@ class DPIRunner:
 dpi_runner = DPIRunner()
 
 
+# ── Routes ───────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
-
-
-@app.route('/static/<path:path>')
-def static_files(path):
-    return send_from_directory('static', path)
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 
 @app.route('/api/run', methods=['POST'])
 def run_analysis():
-    data = request.json
-    
-    input_file = data.get('input_file', os.path.join(os.path.dirname(SCRIPT_DIR), 'test_dpi.pcap'))
-    output_file = data.get('output_file', os.path.join(SCRIPT_DIR, 'output_demo.pcap'))
+    data = request.get_json(silent=True) or {}
+    default_pcap = os.path.join(os.path.dirname(BASE_DIR), 'test_dpi.pcap')
+    input_file = data.get('input_file', default_pcap)
+    output_file = os.path.join(BASE_DIR, 'output_demo.pcap')
     rules = data.get('rules', [])
-    
-    result = dpi_runner.run(input_file, output_file, rules)
-    return jsonify(result)
+    return jsonify(dpi_runner.run(input_file, output_file, rules))
 
 
 @app.route('/api/status')
-def status():
+def api_status():
     with dpi_runner._lock:
         return jsonify({
             'is_running': dpi_runner.is_running,
-            'has_result': dpi_runner.latest_result is not None
+            'has_result': dpi_runner.latest_result is not None,
         })
 
 
 @app.route('/api/result')
-def get_result():
+def api_result():
     with dpi_runner._lock:
         if dpi_runner.latest_result:
             return jsonify(dpi_runner.latest_result)
@@ -129,50 +119,39 @@ def get_result():
 
 
 @app.route('/api/pcap-files')
-def list_pcap_files():
+def api_pcap_files():
     files = []
-    search_dirs = [
-        os.path.dirname(SCRIPT_DIR),
-        SCRIPT_DIR,
-        os.path.join(SCRIPT_DIR, 'samples')
-    ]
-    
-    for search_dir in search_dirs:
-        if os.path.exists(search_dir):
-            for f in os.listdir(search_dir):
+    for d in [os.path.dirname(BASE_DIR), BASE_DIR]:
+        if os.path.exists(d):
+            for f in os.listdir(d):
                 if f.endswith('.pcap'):
-                    full_path = os.path.join(search_dir, f)
-                    size = os.path.getsize(full_path)
-                    files.append({
-                        'name': f,
-                        'path': full_path,
-                        'size': size
-                    })
-    
+                    try:
+                        files.append({
+                            'name': f,
+                            'path': os.path.join(d, f),
+                            'size': os.path.getsize(os.path.join(d, f)),
+                        })
+                    except OSError:
+                        pass
     return jsonify(files)
 
 
 @app.route('/api/apps')
-def list_apps():
-    sys.path.insert(0, PYTHON_DIR)
+def api_apps():
     from dpi_types import APP_NAMES
-    
-    apps = []
-    skip_types = {'UNKNOWN', 'HTTP', 'HTTPS', 'DNS', 'TLS', 'QUIC'}
-    
-    for app_type, name in APP_NAMES.items():
-        if name not in skip_types:
-            apps.append({'id': name.lower(), 'name': name})
-    
+    skip = {'UNKNOWN', 'HTTP', 'HTTPS', 'DNS', 'TLS', 'QUIC'}
+    apps = [
+        {'id': name.lower(), 'name': name}
+        for _, name in sorted(APP_NAMES.items())
+        if name not in skip
+    ]
     return jsonify(apps)
 
 
-# Vercel handler
-def handler(environ, start_response):
-    return app(environ, start_response)
-
+# ── Vercel WSGI entry: expose `app` directly ────────────────────────────────
+# Vercel's Python runtime auto-detects a top-level `app` (WSGI) or
+# `application` (Django WSGI) variable — no handler wrapper needed.
 if __name__ == '__main__':
-    os.makedirs('static', exist_ok=True)
-    print("Starting DPI Dashboard Server...")
-    print("Open http://localhost:5000 in your browser")
+    os.makedirs(STATIC_DIR, exist_ok=True)
+    print(f"Static files served from: {STATIC_DIR}")
     app.run(debug=True, host='0.0.0.0', port=5000)

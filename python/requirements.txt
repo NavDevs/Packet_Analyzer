@@ -1,2 +1,1 @@
-# No external dependencies required!
-# Pure Python implementation - uses only standard library
+flask>=3.0.0
