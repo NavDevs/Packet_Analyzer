@@ -26,6 +26,10 @@ def _serve_static(h, path):
     # Strip query string
     path = path.split('?')[0]
 
+    # Map automatic favicon.ico requests to favicon.png
+    if path in ('/favicon.ico', 'favicon.ico'):
+        path = '/favicon.png'
+
     if path in ('/', ''):
         path = '/index.html'
 
@@ -46,7 +50,18 @@ def _serve_static(h, path):
         return
 
     mime, _ = mimetypes.guess_type(target)
-    mime = mime or 'application/octet-stream'
+    
+    # Map common extensions manually to avoid empty/incorrect MIME types in minimal Vercel OS environments
+    mime_overrides = {
+        '.png': 'image/png',
+        '.ico': 'image/x-icon',
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.svg': 'image/svg+xml',
+    }
+    _, ext = os.path.splitext(target.lower())
+    mime = mime_overrides.get(ext) or mime or 'application/octet-stream'
 
     with open(target, 'rb') as f:
         body = f.read()
