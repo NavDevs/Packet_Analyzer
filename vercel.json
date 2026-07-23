@@ -1,20 +1,9 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "builds": [
+  "outputDirectory": "public",
+  "rewrites": [
     {
-      "src": "api/run.py",
-      "use": "@vercel/python",
-      "config": {
-        "includeFiles": [
-          "public/**",
-          "python/dpi_types.py",
-          "python/sni_extractor.py",
-          "python/packet_parser.py"
-        ]
-      }
+      "source": "/api/(.*)",
+      "destination": "/api/run"
     }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "api/run.py" }
   ]
 }

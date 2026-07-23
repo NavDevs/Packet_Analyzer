@@ -3,20 +3,14 @@ import struct
 import json
 import sys
 import os
-import mimetypes
-import traceback
 from http.server import BaseHTTPRequestHandler
 
-# ---------------------------------------------------------------------------
-# Path resolution — always use absolute paths so Vercel can't get confused
-# ---------------------------------------------------------------------------
-_THIS_FILE = os.path.abspath(__file__)          # /var/task/api/run.py
-_API_DIR   = os.path.dirname(_THIS_FILE)        # /var/task/api
-_REPO_ROOT = os.path.dirname(_API_DIR)          # /var/task
-_PUBLIC_DIR = os.path.join(_REPO_ROOT, 'public')
+# Set up paths for importing python/ modules
+_THIS_FILE = os.path.abspath(__file__)
+_API_DIR   = os.path.dirname(_THIS_FILE)
+_REPO_ROOT = os.path.dirname(_API_DIR)
 _PYTHON_DIR = os.path.join(_REPO_ROOT, 'python')
 
-# Make sure our python/ modules are importable
 if _PYTHON_DIR not in sys.path:
     sys.path.insert(0, _PYTHON_DIR)
 
@@ -25,9 +19,6 @@ from sni_extractor import SNIExtractor, HTTPHostExtractor
 from packet_parser import PacketParser
 
 
-# ---------------------------------------------------------------------------
-# PCAP reader
-# ---------------------------------------------------------------------------
 class SimplePcapReader:
     def __init__(self, data):
         self.data = data
@@ -48,59 +39,18 @@ class SimplePcapReader:
             self.offset += incl_len
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def _send_json(h, data, status=200):
     body = json.dumps(data).encode('utf-8')
     h.send_response(status)
     h.send_header('Content-Type', 'application/json')
     h.send_header('Content-Length', str(len(body)))
     h.send_header('Access-Control-Allow-Origin', '*')
+    h.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    h.send_header('Access-Control-Allow-Headers', 'Content-Type')
     h.end_headers()
     h.wfile.write(body)
 
 
-def _serve_static(h, path):
-    """Read a file from public/ and write it to the response."""
-    # Strip query string
-    path = path.split('?')[0]
-
-    if path in ('/', ''):
-        path = '/index.html'
-
-    # Resolve to absolute path and prevent directory traversal
-    target = os.path.realpath(os.path.join(_PUBLIC_DIR, path.lstrip('/')))
-    pub_real = os.path.realpath(_PUBLIC_DIR)
-
-    if not target.startswith(pub_real):
-        _send_json(h, {'error': 'Forbidden'}, status=403)
-        return
-
-    if not os.path.isfile(target):
-        # SPA fallback — serve index.html
-        target = os.path.join(_PUBLIC_DIR, 'index.html')
-
-    if not os.path.isfile(target):
-        _send_json(h, {'error': 'index.html not found', 'looked_in': _PUBLIC_DIR}, status=404)
-        return
-
-    mime, _ = mimetypes.guess_type(target)
-    mime = mime or 'application/octet-stream'
-
-    with open(target, 'rb') as f:
-        body = f.read()
-
-    h.send_response(200)
-    h.send_header('Content-Type', mime)
-    h.send_header('Content-Length', str(len(body)))
-    h.end_headers()
-    h.wfile.write(body)
-
-
-# ---------------------------------------------------------------------------
-# Route handlers
-# ---------------------------------------------------------------------------
 def _handle_get_apps(h):
     skip = {'Unknown', 'HTTP', 'HTTPS', 'DNS', 'TLS', 'QUIC'}
     apps = [
@@ -221,11 +171,7 @@ def _handle_post_run(h):
     })
 
 
-# ---------------------------------------------------------------------------
-# Vercel Python Serverless handler (BaseHTTPRequestHandler)
-# ---------------------------------------------------------------------------
 class handler(BaseHTTPRequestHandler):
-
     def log_message(self, format, *args):
         pass  # silence access logs
 
@@ -237,38 +183,16 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        try:
-            if self.path.startswith('/api/apps'):
-                _handle_get_apps(self)
-            elif self.path.startswith('/api/debug'):
-                # Temporary debug route — exposes filesystem layout
-                def _ls(p):
-                    try:
-                        return os.listdir(p)
-                    except Exception as ex:
-                        return str(ex)
-                _send_json(self, {
-                    '__file__': _THIS_FILE,
-                    'cwd': os.getcwd(),
-                    'repo_root': _REPO_ROOT,
-                    'public_dir': _PUBLIC_DIR,
-                    'public_exists': os.path.exists(_PUBLIC_DIR),
-                    'public_contents': _ls(_PUBLIC_DIR),
-                    'repo_root_contents': _ls(_REPO_ROOT),
-                    'api_dir_contents': _ls(_API_DIR),
-                })
-            elif self.path.startswith('/api/'):
-                _send_json(self, {'error': 'Not found'}, status=404)
-            else:
-                _serve_static(self, self.path)
-        except Exception as e:
-            _send_json(self, {'error': str(e), 'trace': traceback.format_exc()}, status=500)
+        # We handle GET /api/apps (which can also match /api/apps/)
+        normalized_path = self.path.split('?')[0].rstrip('/')
+        if normalized_path == '/api/apps':
+            _handle_get_apps(self)
+        else:
+            _send_json(self, {'error': 'Not found'}, status=404)
 
     def do_POST(self):
-        try:
-            if self.path.startswith('/api/run'):
-                _handle_post_run(self)
-            else:
-                _send_json(self, {'error': 'Not found'}, status=404)
-        except Exception as e:
-            _send_json(self, {'error': str(e), 'trace': traceback.format_exc()}, status=500)
+        normalized_path = self.path.split('?')[0].rstrip('/')
+        if normalized_path == '/api/run':
+            _handle_post_run(self)
+        else:
+            _send_json(self, {'error': 'Not found'}, status=404)
