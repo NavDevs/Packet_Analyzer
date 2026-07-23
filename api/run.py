@@ -1,19 +1,33 @@
 import base64
-import io
 import struct
 import json
 import sys
 import os
 import mimetypes
+import traceback
 from http.server import BaseHTTPRequestHandler
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
+# ---------------------------------------------------------------------------
+# Path resolution — always use absolute paths so Vercel can't get confused
+# ---------------------------------------------------------------------------
+_THIS_FILE = os.path.abspath(__file__)          # /var/task/api/run.py
+_API_DIR   = os.path.dirname(_THIS_FILE)        # /var/task/api
+_REPO_ROOT = os.path.dirname(_API_DIR)          # /var/task
+_PUBLIC_DIR = os.path.join(_REPO_ROOT, 'public')
+_PYTHON_DIR = os.path.join(_REPO_ROOT, 'python')
+
+# Make sure our python/ modules are importable
+if _PYTHON_DIR not in sys.path:
+    sys.path.insert(0, _PYTHON_DIR)
 
 from dpi_types import APP_NAMES, AppType, sni_to_app_type
 from sni_extractor import SNIExtractor, HTTPHostExtractor
 from packet_parser import PacketParser
 
 
+# ---------------------------------------------------------------------------
+# PCAP reader
+# ---------------------------------------------------------------------------
 class SimplePcapReader:
     def __init__(self, data):
         self.data = data
@@ -23,144 +37,133 @@ class SimplePcapReader:
 
     def _read_all(self):
         while self.offset + 16 <= len(self.data):
-            ts_sec = struct.unpack('<I', self.data[self.offset:self.offset+4])[0]
+            ts_sec  = struct.unpack('<I', self.data[self.offset:self.offset+4])[0]
             ts_usec = struct.unpack('<I', self.data[self.offset+4:self.offset+8])[0]
             incl_len = struct.unpack('<I', self.data[self.offset+8:self.offset+12])[0]
             self.offset += 16
-
             if self.offset + incl_len > len(self.data):
                 break
-
-            pkt_data = self.data[self.offset:self.offset+incl_len]
-            self.packets.append({
-                'ts_sec': ts_sec,
-                'ts_usec': ts_usec,
-                'data': pkt_data
-            })
+            pkt_data = self.data[self.offset:self.offset + incl_len]
+            self.packets.append({'ts_sec': ts_sec, 'ts_usec': ts_usec, 'data': pkt_data})
             self.offset += incl_len
 
 
-# Root of the repo — two levels up from api/run.py
-_REPO_ROOT = os.path.join(os.path.dirname(__file__), '..')
-_PUBLIC_DIR = os.path.join(_REPO_ROOT, 'public')
-
-
-def _serve_static(handler_instance, rel_path):
-    """Serve a file from the public/ directory."""
-    # Default to index.html for root or unknown paths
-    if rel_path in ('/', ''):
-        rel_path = '/index.html'
-
-    file_path = os.path.join(_PUBLIC_DIR, rel_path.lstrip('/'))
-    # Security: prevent directory traversal
-    file_path = os.path.realpath(file_path)
-    if not file_path.startswith(os.path.realpath(_PUBLIC_DIR)):
-        _send_json(handler_instance, {'error': 'Forbidden'}, status=403)
-        return
-
-    if not os.path.isfile(file_path):
-        # For SPA-style routing fall back to index.html
-        file_path = os.path.join(_PUBLIC_DIR, 'index.html')
-
-    mime_type, _ = mimetypes.guess_type(file_path)
-    mime_type = mime_type or 'application/octet-stream'
-
-    with open(file_path, 'rb') as f:
-        content = f.read()
-
-    handler_instance.send_response(200)
-    handler_instance.send_header('Content-Type', mime_type)
-    handler_instance.send_header('Content-Length', str(len(content)))
-    handler_instance.end_headers()
-    handler_instance.wfile.write(content)
-
-
-def _send_json(handler_instance, data, status=200):
-    """Helper to send a JSON response."""
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _send_json(h, data, status=200):
     body = json.dumps(data).encode('utf-8')
-    handler_instance.send_response(status)
-    handler_instance.send_header('Content-Type', 'application/json')
-    handler_instance.send_header('Content-Length', str(len(body)))
-    handler_instance.send_header('Access-Control-Allow-Origin', '*')
-    handler_instance.end_headers()
-    handler_instance.wfile.write(body)
+    h.send_response(status)
+    h.send_header('Content-Type', 'application/json')
+    h.send_header('Content-Length', str(len(body)))
+    h.send_header('Access-Control-Allow-Origin', '*')
+    h.end_headers()
+    h.wfile.write(body)
 
 
-def _handle_get_apps(handler_instance):
-    """Handle GET /api/apps — returns list of detectable apps."""
-    apps = []
+def _serve_static(h, path):
+    """Read a file from public/ and write it to the response."""
+    # Strip query string
+    path = path.split('?')[0]
+
+    if path in ('/', ''):
+        path = '/index.html'
+
+    # Resolve to absolute path and prevent directory traversal
+    target = os.path.realpath(os.path.join(_PUBLIC_DIR, path.lstrip('/')))
+    pub_real = os.path.realpath(_PUBLIC_DIR)
+
+    if not target.startswith(pub_real):
+        _send_json(h, {'error': 'Forbidden'}, status=403)
+        return
+
+    if not os.path.isfile(target):
+        # SPA fallback — serve index.html
+        target = os.path.join(_PUBLIC_DIR, 'index.html')
+
+    if not os.path.isfile(target):
+        _send_json(h, {'error': 'index.html not found', 'looked_in': _PUBLIC_DIR}, status=404)
+        return
+
+    mime, _ = mimetypes.guess_type(target)
+    mime = mime or 'application/octet-stream'
+
+    with open(target, 'rb') as f:
+        body = f.read()
+
+    h.send_response(200)
+    h.send_header('Content-Type', mime)
+    h.send_header('Content-Length', str(len(body)))
+    h.end_headers()
+    h.wfile.write(body)
+
+
+# ---------------------------------------------------------------------------
+# Route handlers
+# ---------------------------------------------------------------------------
+def _handle_get_apps(h):
     skip = {'Unknown', 'HTTP', 'HTTPS', 'DNS', 'TLS', 'QUIC'}
-    for app_type, name in APP_NAMES.items():
-        if name not in skip:
-            apps.append({'id': name.lower(), 'name': name})
-    _send_json(handler_instance, apps)
+    apps = [
+        {'id': name.lower(), 'name': name}
+        for app_type, name in APP_NAMES.items()
+        if name not in skip
+    ]
+    _send_json(h, apps)
 
 
-def _handle_post_run(handler_instance):
-    """Handle POST /api/run — analyse uploaded pcap data."""
-    content_length = int(handler_instance.headers.get('Content-Length', 0))
-    raw_body = handler_instance.rfile.read(content_length)
+def _handle_post_run(h):
+    content_length = int(h.headers.get('Content-Length', 0))
+    raw = h.rfile.read(content_length)
 
     try:
-        body = json.loads(raw_body.decode('utf-8'))
+        body = json.loads(raw.decode('utf-8'))
     except Exception:
-        _send_json(handler_instance, {'success': False, 'error': 'Invalid JSON'}, status=400)
+        _send_json(h, {'success': False, 'error': 'Invalid JSON'}, status=400)
         return
 
-    pcap_base64 = body.get('pcap_data', '')
-    rules = body.get('rules', [])
+    pcap_b64 = body.get('pcap_data', '')
+    rules    = body.get('rules', [])
 
-    if not pcap_base64:
-        _send_json(handler_instance, {'success': False, 'error': 'No pcap_data provided'}, status=400)
+    if not pcap_b64:
+        _send_json(h, {'success': False, 'error': 'No pcap_data provided'}, status=400)
         return
 
     try:
-        pcap_bytes = base64.b64decode(pcap_base64)
+        pcap_bytes = base64.b64decode(pcap_b64)
         reader = SimplePcapReader(pcap_bytes)
     except Exception as e:
-        _send_json(handler_instance, {'success': False, 'error': f'Failed to decode pcap: {e}'}, status=400)
+        _send_json(h, {'success': False, 'error': f'Bad pcap: {e}'}, status=400)
         return
 
-    # Build rule sets
-    blocked_apps = set()
+    blocked_apps    = set()
     blocked_domains = []
-    blocked_ips = set()
+    blocked_ips     = set()
 
     for rule in rules:
-        rule_type = rule.get('type', '')
-        value = rule.get('value', '')
-        if rule_type == 'app':
-            for app_type, name in APP_NAMES.items():
-                if name.lower() == value.lower():
-                    blocked_apps.add(app_type)
+        rt, val = rule.get('type', ''), rule.get('value', '')
+        if rt == 'app':
+            for at, name in APP_NAMES.items():
+                if name.lower() == val.lower():
+                    blocked_apps.add(at)
                     break
-        elif rule_type == 'domain':
-            blocked_domains.append(value.lower())
-        elif rule_type == 'ip':
-            blocked_ips.add(value)
+        elif rt == 'domain':
+            blocked_domains.append(val.lower())
+        elif rt == 'ip':
+            blocked_ips.add(val)
 
-    stats = {
-        'total_packets': 0,
-        'total_bytes': 0,
-        'tcp_packets': 0,
-        'udp_packets': 0,
-        'forwarded': 0,
-        'dropped': 0
-    }
-
-    app_counts = {}
+    stats = {'total_packets': 0, 'total_bytes': 0,
+             'tcp_packets': 0, 'udp_packets': 0,
+             'forwarded': 0, 'dropped': 0}
+    app_counts   = {}
     detected_snis = {}
 
     for pkt in reader.packets:
         parsed = PacketParser.parse_packet(bytes(pkt['data']))
-
-        if not parsed['valid']:
-            continue
-        if parsed['protocol'] not in (6, 17):
+        if not parsed['valid'] or parsed['protocol'] not in (6, 17):
             continue
 
         stats['total_packets'] += 1
-        stats['total_bytes'] += len(pkt['data'])
+        stats['total_bytes']   += len(pkt['data'])
 
         if parsed['protocol'] == 6:
             stats['tcp_packets'] += 1
@@ -169,8 +172,8 @@ def _handle_post_run(handler_instance):
 
         dst_port = parsed['dst_port']
         src_port = parsed['src_port']
-        payload = parsed['payload']
-        sni = ''
+        payload  = parsed['payload']
+        sni      = ''
         app_type = AppType.UNKNOWN
 
         if dst_port == 443 and payload:
@@ -179,51 +182,38 @@ def _handle_post_run(handler_instance):
         elif dst_port == 80 and payload:
             host = HTTPHostExtractor.extract(bytes(payload))
             if host:
-                sni = host
-                app_type = sni_to_app_type(host)
+                sni, app_type = host, sni_to_app_type(host)
             else:
                 app_type = AppType.HTTP
         elif dst_port == 53 or src_port == 53:
             app_type = AppType.DNS
-        else:
-            app_type = AppType.UNKNOWN
 
         if sni and sni not in detected_snis:
             detected_snis[sni] = app_type
 
         app_counts[app_type] = app_counts.get(app_type, 0) + 1
 
-        blocked = False
-        if app_type in blocked_apps:
-            blocked = True
-        elif sni:
-            sni_lower = sni.lower()
-            for dom in blocked_domains:
-                if dom in sni_lower:
-                    blocked = True
-                    break
-
+        blocked = app_type in blocked_apps or (
+            sni and any(d in sni.lower() for d in blocked_domains)
+        )
         if blocked:
             stats['dropped'] += 1
         else:
             stats['forwarded'] += 1
 
-    app_breakdown = []
-    for app_type, count in app_counts.items():
-        pct = 100.0 * count / stats['total_packets'] if stats['total_packets'] > 0 else 0
-        app_breakdown.append({
-            'name': APP_NAMES.get(app_type, 'Unknown'),
-            'count': count,
-            'percentage': round(pct, 1)
-        })
-    app_breakdown.sort(key=lambda x: x['count'], reverse=True)
+    total = stats['total_packets'] or 1
+    app_breakdown = sorted([
+        {'name': APP_NAMES.get(at, 'Unknown'), 'count': c,
+         'percentage': round(100.0 * c / total, 1)}
+        for at, c in app_counts.items()
+    ], key=lambda x: x['count'], reverse=True)
 
     detected_list = [
         {'domain': sni, 'app': APP_NAMES.get(app, 'Unknown')}
         for sni, app in detected_snis.items()
     ]
 
-    _send_json(handler_instance, {
+    _send_json(h, {
         'success': True,
         'stats': stats,
         'app_breakdown': app_breakdown,
@@ -231,15 +221,15 @@ def _handle_post_run(handler_instance):
     })
 
 
+# ---------------------------------------------------------------------------
+# Vercel Python Serverless handler (BaseHTTPRequestHandler)
+# ---------------------------------------------------------------------------
 class handler(BaseHTTPRequestHandler):
-    """Vercel Python Serverless Function handler."""
 
     def log_message(self, format, *args):
-        # Suppress default access log noise in Vercel logs
-        pass
+        pass  # silence access logs
 
     def do_OPTIONS(self):
-        """Handle CORS preflight requests."""
         self.send_response(204)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -247,16 +237,21 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path.startswith('/api/apps'):
-            _handle_get_apps(self)
-        elif self.path.startswith('/api/'):
-            _send_json(self, {'error': 'Not found'}, status=404)
-        else:
-            # Serve static frontend files (index.html, favicon, etc.)
-            _serve_static(self, self.path)
+        try:
+            if self.path.startswith('/api/apps'):
+                _handle_get_apps(self)
+            elif self.path.startswith('/api/'):
+                _send_json(self, {'error': 'Not found'}, status=404)
+            else:
+                _serve_static(self, self.path)
+        except Exception as e:
+            _send_json(self, {'error': str(e), 'trace': traceback.format_exc()}, status=500)
 
     def do_POST(self):
-        if self.path.startswith('/api/run'):
-            _handle_post_run(self)
-        else:
-            _send_json(self, {'error': 'Not found'}, status=404)
+        try:
+            if self.path.startswith('/api/run'):
+                _handle_post_run(self)
+            else:
+                _send_json(self, {'error': 'Not found'}, status=404)
+        except Exception as e:
+            _send_json(self, {'error': str(e), 'trace': traceback.format_exc()}, status=500)
