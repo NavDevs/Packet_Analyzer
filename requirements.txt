@@ -1,1 +1,1 @@
-# No external packages needed — pure Python standard library only
+flask>=3.0.0
